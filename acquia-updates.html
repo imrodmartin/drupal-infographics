@@ -1,0 +1,765 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Acquia Drupal Upgrade Workflow — DrupalHelps.com</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    img, svg { display: block; max-width: 100%; }
+    :root {
+      --font-display: 'Archivo', 'Inter', sans-serif;
+      --font-sans: 'Inter', sans-serif;
+      --bg-canvas:   #0077C0;
+      --card-bg:     #FFFFFF;
+      --card-bg-alt: #F0F7FF;
+      --text-dark:   #0A1A2E;
+      --text-mid:    #2E4A6A;
+      --border-light:#C8DFF2;
+      --accent:      #0077C0;
+      --accent-lt:   #25AAE1;
+      --accent-2:    #FFE94D;
+      --danger:      #D93025;
+      --warn-color:  #E8700A;
+      --safe-color:  #1A7F37;
+      --white:       #FFFFFF;
+    }
+
+    /* ── SCREEN BASE ── */
+    body {
+      font-family: var(--font-sans);
+      background: #003870;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 40px 20px;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+    .canvas {
+      width: 1200px;
+      background: var(--bg-canvas);
+      box-shadow: 0 20px 80px rgba(0,0,0,0.5);
+    }
+
+    /* ── HOVER LIFT (screen only) ── */
+    @media screen {
+      .step-card, .rule-card, .phase-block, .cmd-block {
+        transition: transform 220ms ease, box-shadow 220ms ease;
+      }
+      .step-card:hover  { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0,119,192,0.18), 5px 5px 0 var(--accent-2); }
+      .rule-card:hover  { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
+      .phase-block:hover{ transform: translateY(-3px); box-shadow: 0 10px 28px rgba(0,0,0,0.15); }
+      @keyframes pulse-badge {
+        0%,100% { box-shadow: 0 0 0 0 rgba(255,233,77,0.45); }
+        50%      { box-shadow: 0 0 0 12px rgba(255,233,77,0); }
+      }
+      .header-badge { animation: pulse-badge 2.8s ease-in-out infinite; }
+    }
+
+    /* ══ HEADER ══ */
+    .header {
+      background: #001F3F;
+      padding: 56px 64px 52px;
+      border-bottom: 5px solid var(--accent-2);
+    }
+    /* flex row so badge+logo sit in the flow, not absolute */
+    .header-inner {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 32px;
+    }
+    .header-left { flex: 1 1 auto; min-width: 0; }
+    .header-right {
+      flex: 0 0 auto;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      justify-content: space-between;
+      align-self: stretch;   /* stretch to full header height */
+      gap: 0;
+    }
+    .header-eyebrow {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 16px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--accent-lt);
+      margin-bottom: 20px;
+    }
+    .header-title {
+      font-family: var(--font-display);
+      font-weight: 900;
+      font-size: 88px;
+      line-height: 0.88;
+      letter-spacing: -0.04em;
+      text-transform: uppercase;
+      color: var(--white);
+    }
+    .header-title span { color: var(--accent-2); display: block; }
+    .header-sub {
+      font-size: 22px;
+      color: #8BBCD8;
+      font-weight: 400;
+      max-width: 680px;
+      line-height: 1.55;
+      margin-top: 24px;
+    }
+    .header-badge {
+      background: var(--accent-2);
+      color: #001F3F;
+      font-family: var(--font-display);
+      font-weight: 900;
+      font-size: 16px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 12px 24px;
+      border: 3px solid rgba(255,255,255,0.2);
+      white-space: nowrap;
+    }
+    .drupalhelps-logo img { height: 48px; width: auto; }
+
+    /* ══ RULE BANNER ══ */
+    .rule-banner {
+      background: var(--accent-2);
+      padding: 24px 64px;
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      border-bottom: 4px solid #001F3F;
+    }
+    .rule-banner-label {
+      font-family: var(--font-display);
+      font-weight: 900;
+      font-size: 15px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      background: #001F3F;
+      color: var(--accent-2);
+      padding: 6px 16px;
+      white-space: nowrap;
+    }
+    .rule-banner-rule {
+      font-family: var(--font-display);
+      font-weight: 800;
+      font-size: 22px;
+      color: #001F3F;
+      line-height: 1.2;
+    }
+
+    /* ══ SHARED ══ */
+    .section-label {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 13px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--accent-2);
+      margin-bottom: 28px;
+      opacity: 0.9;
+    }
+
+    /* ══ PHASE STRIP ══ */
+    .phase-strip {
+      background: rgba(0,0,0,0.18);
+      padding: 44px 48px 40px;
+      border-bottom: 3px solid rgba(255,255,255,0.15);
+    }
+    .phase-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 20px; }
+    .phase-block {
+      background: var(--card-bg);
+      border-top: 5px solid var(--accent);
+      padding: 28px 26px 24px;
+      position: relative;
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+    .phase-num {
+      font-family: var(--font-display);
+      font-weight: 900;
+      font-size: 56px;
+      line-height: 1;
+      letter-spacing: -0.04em;
+      color: var(--accent);
+      opacity: 0.12;
+      position: absolute;
+      top: 14px; right: 18px;
+    }
+    .phase-tag { font-family: var(--font-display); font-weight: 700; font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent-lt); margin-bottom: 10px; }
+    .phase-title { font-family: var(--font-display); font-weight: 800; font-size: 26px; color: var(--text-dark); letter-spacing: -0.02em; line-height: 1.1; margin-bottom: 10px; }
+    .phase-desc { font-size: 17px; color: var(--text-mid); line-height: 1.6; }
+
+    /* ══ STEPS ══ */
+    .steps-section { background: var(--card-bg-alt); padding: 48px 48px 44px; }
+    .steps-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 18px; }
+    .step-card {
+      background: var(--card-bg);
+      border: 2px solid var(--border-light);
+      border-left: 5px solid var(--accent);
+      padding: 28px 26px 24px;
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+    .step-card.full-width { grid-column: 1/-1; border-left-color: var(--accent-lt); }
+    .step-header { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 14px; }
+    .step-num {
+      background: var(--accent);
+      color: var(--white);
+      font-family: var(--font-display);
+      font-weight: 900;
+      font-size: 18px;
+      width: 36px; height: 36px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; margin-top: 3px;
+    }
+    .step-tag-inline {
+      display: inline-block;
+      background: var(--accent-lt);
+      color: var(--white);
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 11px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      padding: 3px 10px;
+      margin-bottom: 10px;
+    }
+    .step-title { font-family: var(--font-display); font-weight: 800; font-size: 22px; color: var(--text-dark); letter-spacing: -0.02em; line-height: 1.15; }
+    .step-body { font-size: 17px; color: var(--text-mid); line-height: 1.65; padding-left: 52px; }
+    .step-body strong { color: var(--text-dark); font-weight: 700; }
+    .step-body .hl { color: var(--danger); font-weight: 700; }
+    .step-body .mono {
+      font-family: 'Courier New', monospace;
+      font-size: 15px;
+      background: #EEF5FC;
+      color: #003D60;
+      padding: 1px 6px;
+      border-radius: 3px;
+    }
+
+    /* ══ CMD SECTION ══ */
+    .cmd-section {
+      background: #001528;
+      padding: 44px 48px 40px;
+      border-top: 4px solid var(--accent-lt);
+      border-bottom: 4px solid var(--accent-lt);
+    }
+    .cmd-section .section-label { color: var(--accent-lt); }
+    .cmd-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 16px; }
+    .cmd-block {
+      background: #0A1F35;
+      border: 1px solid #1E3A56;
+      border-top: 3px solid var(--accent-lt);
+      padding: 22px 24px 20px;
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+    .cmd-label { font-family: var(--font-display); font-weight: 700; font-size: 14px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent-lt); margin-bottom: 14px; }
+    .cmd-line { font-family: 'Courier New', monospace; font-size: 16px; color: #A8D8F0; line-height: 2; }
+    .cmd-comment { color: #7AADCC; }
+    .cmd-key { color: var(--accent-2); }
+
+    /* copy-to-clipboard (screen only) */
+    @media screen {
+      .mono { cursor: pointer; user-select: none; transition: background 180ms, color 180ms; }
+      .mono:hover { background: #D0E8F8; color: #002244; }
+      .mono::after { content: '\2398'; font-family: var(--font-sans); font-size: 11px; margin-left: 4px; opacity: 0.45; vertical-align: middle; }
+      .mono.copied { background: #D4EDDA !important; color: #155724 !important; }
+      .mono.copied::after { content: '\2713 copied'; opacity: 1; font-size: 10px; }
+      .cmd-line { cursor: pointer; border-radius: 3px; padding: 1px 3px; margin: 0 -3px; transition: background 150ms; }
+      .cmd-line:hover { background: rgba(255,255,255,0.07); }
+      .cmd-line.copied { background: rgba(0,200,83,0.15) !important; }
+    }
+
+    /* ══ RULES ══ */
+    .rules-section { background: var(--card-bg-alt); padding: 48px 48px 44px; }
+    .rules-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
+    .rule-card {
+      background: var(--card-bg);
+      border: 2px solid var(--border-light);
+      border-top: 5px solid var(--border-light);
+      padding: 24px 22px 20px;
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+    .rule-card.danger  { border-top-color: var(--danger); }
+    .rule-card.warning { border-top-color: var(--warn-color); }
+    .rule-card.safe    { border-top-color: var(--safe-color); }
+    .rule-icon { margin-bottom: 12px; }
+    .rule-title { font-family: var(--font-display); font-weight: 800; font-size: 20px; color: var(--text-dark); letter-spacing: -0.01em; margin-bottom: 10px; line-height: 1.2; }
+    .rule-desc { font-size: 16px; color: var(--text-mid); line-height: 1.6; }
+    .rule-desc code { font-family: 'Courier New', monospace; font-size: 14px; background: #EEF5FC; color: #003D60; padding: 1px 5px; border-radius: 3px; }
+    .rule-card.danger .rule-desc code { color: #7A1810; }
+    .rule-card.safe   .rule-desc code { color: #0D3F1B; }
+
+    /* ══ FOOTER ══ */
+    .footer {
+      background: #001F3F;
+      border-top: 5px solid var(--accent-2);
+      padding: 32px 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .footer-url { font-family: var(--font-display); font-weight: 800; font-size: 26px; color: var(--accent-lt); letter-spacing: -0.01em; }
+    .footer-tagline { margin-top: 6px; font-size: 16px; color: #6A9AB8; }
+    .footer-rule { font-family: var(--font-display); font-weight: 800; font-size: 18px; color: var(--accent-2); text-transform: uppercase; letter-spacing: 0.06em; text-align: right; line-height: 1.7; }
+
+    /* ══════════════════════════════
+       PRINT MEDIA QUERY
+       Target: letter landscape, 0.4in margins
+       Page 1: header + rule banner + phase strip + steps (8 cards)
+       Page 2: step 9 (full-width) + cmd section + rules + footer
+    ══════════════════════════════ */
+    @media print {
+      @page { size: letter; margin: 0.35in 0.3in; }
+
+      /* Force colors to print */
+      *, *::before, *::after {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        color-adjust: exact !important;
+        /* Kill all animations */
+        animation: none !important;
+        transition: none !important;
+        opacity: 1 !important;
+        transform: none !important;
+      }
+
+      html, body {
+        background: #0077C0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        min-height: 0 !important;
+        height: auto !important;
+        display: block !important;
+      }
+
+      .canvas {
+        width: 100% !important;
+        max-width: 100% !important;
+        box-shadow: none !important;
+        overflow: visible !important;
+        position: static !important;
+      }
+
+      /* ── Header: scale down title, keep flex row ── */
+      .header { padding: 22px 40px 20px !important; }
+      .header-inner { gap: 24px !important; }
+      .header-eyebrow { font-size: 10px !important; margin-bottom: 10px !important; }
+      .header-title { font-size: 52px !important; }
+      .header-sub { font-size: 13px !important; margin-top: 10px !important; max-width: 560px !important; }
+      .header-badge { font-size: 11px !important; padding: 8px 14px !important; }
+      .drupalhelps-logo img { height: 34px !important; }
+
+      /* ── Rule banner ── */
+      .rule-banner { padding: 12px 40px !important; gap: 16px !important; }
+      .rule-banner-label { font-size: 10px !important; padding: 4px 10px !important; }
+      .rule-banner-rule { font-size: 14px !important; }
+
+      /* ── Phase strip: keep all 3 in one row, no break ── */
+      .phase-strip {
+        padding: 20px 28px 18px !important;
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+      }
+      .phase-grid { gap: 10px !important; }
+      .phase-block { padding: 14px 12px 12px !important; }
+      .phase-num { font-size: 36px !important; top: 10px !important; right: 12px !important; }
+      .phase-tag { font-size: 9px !important; margin-bottom: 6px !important; }
+      .phase-title { font-size: 16px !important; margin-bottom: 6px !important; }
+      .phase-desc { font-size: 11.5px !important; line-height: 1.45 !important; }
+      .section-label { font-size: 10px !important; margin-bottom: 14px !important; }
+
+      /* ── Steps: 2-col grid, compact ── */
+      .steps-section { padding: 18px 28px 16px !important; }
+      .steps-grid { gap: 10px !important; }
+      .step-card { padding: 12px 12px 10px !important; }
+      .step-tag-inline { font-size: 9px !important; padding: 2px 7px !important; margin-bottom: 5px !important; }
+      .step-header { gap: 8px !important; margin-bottom: 6px !important; }
+      .step-num { width: 24px !important; height: 24px !important; font-size: 12px !important; }
+      .step-title { font-size: 14px !important; }
+      .step-body { font-size: 11.5px !important; line-height: 1.45 !important; padding-left: 32px !important; }
+      .step-body .mono { font-size: 11px !important; padding: 0 4px !important; }
+
+      /* ── Force page break before cmd section ── */
+      .cmd-section {
+        break-before: page !important;
+        page-break-before: always !important;
+        padding: 20px 28px 18px !important;
+      }
+      .cmd-grid { gap: 10px !important; }
+      .cmd-block { padding: 12px 14px 10px !important; }
+      .cmd-label { font-size: 10px !important; margin-bottom: 8px !important; }
+      .cmd-line { font-size: 11.5px !important; line-height: 1.7 !important; }
+
+      /* Hide clipboard icon in print */
+      .mono::after { display: none !important; content: none !important; }
+
+      /* ── Rules: 3-col, stay with cmd on page 2 ── */
+      .rules-section { padding: 18px 28px 16px !important; }
+      .rules-grid { gap: 10px !important; }
+      .rule-card { padding: 12px 12px 10px !important; }
+      .rule-icon svg { width: 20px !important; height: 20px !important; margin-bottom: 6px !important; }
+      .rule-title { font-size: 13px !important; margin-bottom: 6px !important; }
+      .rule-desc { font-size: 11.5px !important; line-height: 1.45 !important; }
+      .rule-desc code { font-size: 11px !important; }
+
+      /* ── Footer ── */
+      .footer {
+        padding: 14px 40px !important;
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+      }
+      .footer-url { font-size: 16px !important; }
+      .footer-tagline { font-size: 10px !important; margin-top: 4px !important; }
+      .footer-rule { font-size: 11px !important; }
+      a { text-decoration: none !important; }
+    }
+  </style>
+</head>
+<body>
+<main class="canvas">
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="header-inner">
+      <div class="header-left">
+        <div class="header-eyebrow">DrupalHelps.com &mdash; Acquia Hosting Best Practices</div>
+        <div class="header-title">
+          Drupal Upgrade<br>
+          <span>The Right Way</span>
+        </div>
+        <p class="header-sub">Core &amp; module updates across Acquia Cloud environments &mdash; a repeatable, low-risk workflow every site builder needs.</p>
+      </div>
+      <div class="header-right">
+        <div class="header-badge">Drupal 10 / 11</div>
+        <div class="drupalhelps-logo">
+          <a href="https://drupalhelps.com" target="_blank" rel="noopener" style="display:block;line-height:0;">
+            <img src="data:image/png;base64,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" alt="DrupalHelps.com" style="height:48px;width:auto;display:block;">
+          </a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- GOLDEN RULE -->
+  <div class="rule-banner">
+    <span class="rule-banner-label">Golden Rule</span>
+    <span class="rule-banner-rule">All code changes happen LOCALLY in a feature branch &mdash; never directly on Acquia. Local &rarr; Acquia Dev &rarr; Stage &rarr; Production.</span>
+  </div>
+
+  <!-- THREE ENVIRONMENTS -->
+  <section class="phase-strip">
+    <div class="section-label">Your Acquia Environment Pipeline</div>
+    <div class="phase-grid">
+      <div class="phase-block">
+        <div class="phase-num">01</div>
+        <div class="phase-tag">All Work Starts Here</div>
+        <div class="phase-title">Your Local Environment</div>
+        <div class="phase-desc">All Composer updates, patches, and code changes happen locally in a feature branch. DDEV, Lando, or your local stack &mdash; never on Acquia directly.</div>
+      </div>
+      <div class="phase-block">
+        <div class="phase-num">02</div>
+        <div class="phase-tag">Integration &rarr; Validate</div>
+        <div class="phase-title">Acquia Dev &rarr; Stage</div>
+        <div class="phase-desc">Merge your branch into Dev to integrate with other work. Then promote to Stage &mdash; a prod mirror &mdash; for full regression testing and stakeholder signoff.</div>
+      </div>
+      <div class="phase-block">
+        <div class="phase-num">03</div>
+        <div class="phase-tag">Final Destination</div>
+        <div class="phase-title">Acquia Production</div>
+        <div class="phase-desc">Deploy only after Stage is clean and signed off. Take a DB backup first. Run database updates and clear cache immediately after deploy.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP-BY-STEP WORKFLOW -->
+  <section class="steps-section">
+    <div class="section-label" style="color: var(--accent);">Step-by-Step Upgrade Workflow</div>
+    <div class="steps-grid">
+
+      <div class="step-card">
+        <div class="step-tag-inline">Local &mdash; Preparation</div>
+        <div class="step-header">
+          <div class="step-num">1</div>
+          <div class="step-title">Pull Prod DB to Local &amp; Create Branch</div>
+        </div>
+        <div class="step-body">Use <span class="mono">acli pull:db</span> or Acquia Cloud UI to pull the latest prod database into your local environment. Branch from <strong>main/master</strong> before touching anything: <span class="mono">update/core-11.x-YYYY-MM</span>.</div>
+      </div>
+
+      <div class="step-card">
+        <div class="step-tag-inline">Local &mdash; Update</div>
+        <div class="step-header">
+          <div class="step-num">2</div>
+          <div class="step-title">Run Targeted Composer Update Locally</div>
+        </div>
+        <div class="step-body">Do <span class="hl">NOT</span> run <span class="mono">composer update</span> with no args &mdash; updates everything at once, rollback nightmare. Target <strong>core first</strong>, then contrib modules in logical groups (e.g., all Media-related together).</div>
+      </div>
+
+      <div class="step-card">
+        <div class="step-tag-inline">Local &mdash; Update</div>
+        <div class="step-header">
+          <div class="step-num">3</div>
+          <div class="step-title">Run DB Updates &amp; Test Locally</div>
+        </div>
+        <div class="step-body">Run <span class="mono">drush updb -y</span>, then <span class="mono">drush cim -y</span> if config changed, then <span class="mono">drush cr</span>. Test all content types, Views, Layout Builder, and key user flows locally before touching Acquia.</div>
+      </div>
+
+      <div class="step-card">
+        <div class="step-tag-inline">Local &mdash; Commit</div>
+        <div class="step-header">
+          <div class="step-num">4</div>
+          <div class="step-title">Commit &amp; Push Your Feature Branch</div>
+        </div>
+        <div class="step-body">Commit <span class="mono">composer.json</span>, <span class="mono">composer.lock</span>, and any exported config changes. Push your branch. Open a PR for team review &mdash; no direct merges to main without review.</div>
+      </div>
+
+      <div class="step-card">
+        <div class="step-tag-inline">Acquia Dev &mdash; Integration</div>
+        <div class="step-header">
+          <div class="step-num">5</div>
+          <div class="step-title">Merge to Dev &amp; Deploy to Acquia Dev</div>
+        </div>
+        <div class="step-body">After PR approval, merge your branch into the <strong>dev integration branch</strong> and deploy to Acquia Dev. Run <span class="mono">drush updb</span> and <span class="mono">drush cim</span>. Confirm the build is stable and no conflicts with other recent work.</div>
+      </div>
+
+      <div class="step-card">
+        <div class="step-tag-inline">Acquia Stage &mdash; Promote</div>
+        <div class="step-header">
+          <div class="step-num">6</div>
+          <div class="step-title">Sync Prod DB to Stage &amp; Deploy</div>
+        </div>
+        <div class="step-body">Copy the <strong>prod DB fresh to Stage</strong> via Acquia Cloud immediately before testing. Deploy the same code. Run <span class="mono">drush updb</span> and <span class="mono">drush cim</span>. This is your production simulation &mdash; take it seriously.</div>
+      </div>
+
+      <div class="step-card">
+        <div class="step-tag-inline">Acquia Stage &mdash; Validation</div>
+        <div class="step-header">
+          <div class="step-num">7</div>
+          <div class="step-title">Stakeholder Signoff on Stage</div>
+        </div>
+        <div class="step-body">Have a content editor or site owner walk through critical paths. Check Acquia Insight. Confirm <strong>automated tests pass</strong>. Get explicit signoff before any prod deploy.</div>
+      </div>
+
+      <div class="step-card">
+        <div class="step-tag-inline">Acquia Prod &mdash; Deploy</div>
+        <div class="step-header">
+          <div class="step-num">8</div>
+          <div class="step-title">Backup, Deploy to Prod &amp; Run Updates</div>
+        </div>
+        <div class="step-body">Deploy during a <strong>low-traffic window</strong>. Take a manual DB backup first. Enable maintenance mode &rarr; deploy code &rarr; <span class="mono">drush updb</span> &rarr; <span class="mono">drush cim</span> &rarr; <span class="mono">drush cr</span> &rarr; disable maintenance mode.</div>
+      </div>
+
+      <div class="step-card full-width">
+        <div class="step-tag-inline">Post-Deploy &mdash; Monitor</div>
+        <div class="step-header">
+          <div class="step-num">9</div>
+          <div class="step-title">Monitor Production &amp; Document</div>
+        </div>
+        <div class="step-body">Watch Acquia logs and New Relic for <strong>30&ndash;60 minutes</strong> post-deploy. Monitor <span class="mono">/admin/reports/dblog</span> for new errors. Merge dev integration branch back to main if needed. Document what was updated, the date, and any issues in your changelog.</div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- COMPOSER COMMANDS -->
+  <section class="cmd-section">
+    <div class="section-label">Key Composer &amp; Drush Commands</div>
+    <div class="cmd-grid">
+
+      <div class="cmd-block">
+        <div class="cmd-label">Update Core Only</div>
+        <div class="cmd-line"><span class="cmd-comment"># Core + core-recommended only</span></div>
+        <div class="cmd-line"><span class="cmd-key">composer</span> update drupal/core \</div>
+        <div class="cmd-line">&nbsp;&nbsp;drupal/core-recommended \</div>
+        <div class="cmd-line">&nbsp;&nbsp;drupal/core-composer-scaffold \</div>
+        <div class="cmd-line">&nbsp;&nbsp;--with-all-dependencies</div>
+      </div>
+
+      <div class="cmd-block">
+        <div class="cmd-label">Update Contrib Module Group</div>
+        <div class="cmd-line"><span class="cmd-comment"># Target related modules together</span></div>
+        <div class="cmd-line"><span class="cmd-key">composer</span> update drupal/views \</div>
+        <div class="cmd-line">&nbsp;&nbsp;drupal/views_infinite_scroll \</div>
+        <div class="cmd-line">&nbsp;&nbsp;drupal/views_bulk_operations \</div>
+        <div class="cmd-line">&nbsp;&nbsp;--with-all-dependencies</div>
+      </div>
+
+      <div class="cmd-block">
+        <div class="cmd-label">Dry Run &mdash; See What Changes</div>
+        <div class="cmd-line"><span class="cmd-comment"># Preview before committing</span></div>
+        <div class="cmd-line"><span class="cmd-key">composer</span> update --dry-run \</div>
+        <div class="cmd-line">&nbsp;&nbsp;drupal/core-recommended</div>
+        <div class="cmd-line">&nbsp;</div>
+        <div class="cmd-line"><span class="cmd-comment"># Check all contrib:</span></div>
+        <div class="cmd-line"><span class="cmd-key">composer</span> outdated "drupal/*"</div>
+      </div>
+
+      <div class="cmd-block">
+        <div class="cmd-label">Post-Update Drush Sequence</div>
+        <div class="cmd-line"><span class="cmd-comment"># Always run in this exact order</span></div>
+        <div class="cmd-line"><span class="cmd-key">drush</span> updb -y</div>
+        <div class="cmd-line"><span class="cmd-key">drush</span> cim -y</div>
+        <div class="cmd-line"><span class="cmd-key">drush</span> cr</div>
+        <div class="cmd-line"><span class="cmd-comment"># Export config after cim on prod:</span></div>
+        <div class="cmd-line"><span class="cmd-key">drush</span> cex -y &amp;&amp; git add . &amp;&amp; git commit</div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- RULES / PITFALLS -->
+  <section class="rules-section">
+    <div class="section-label" style="color: var(--accent);">Critical Rules &amp; Common Mistakes</div>
+    <div class="rules-grid">
+
+      <div class="rule-card danger">
+        <div class="rule-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2L2 20H22L12 2Z" stroke="#D93025" stroke-width="2.2" fill="none" stroke-linejoin="round"/>
+            <line x1="12" y1="9" x2="12" y2="14.5" stroke="#D93025" stroke-width="2.2" stroke-linecap="round"/>
+            <circle cx="12" cy="17.5" r="1.2" fill="#D93025"/>
+          </svg>
+        </div>
+        <div class="rule-title">Never Composer Update All</div>
+        <div class="rule-desc">Running <code>composer update</code> with no arguments updates every dependency at once. Impossible to isolate what broke when something goes wrong.</div>
+      </div>
+
+      <div class="rule-card danger">
+        <div class="rule-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2L2 20H22L12 2Z" stroke="#D93025" stroke-width="2.2" fill="none" stroke-linejoin="round"/>
+            <line x1="12" y1="9" x2="12" y2="14.5" stroke="#D93025" stroke-width="2.2" stroke-linecap="round"/>
+            <circle cx="12" cy="17.5" r="1.2" fill="#D93025"/>
+          </svg>
+        </div>
+        <div class="rule-title">Never Skip the DB Backup</div>
+        <div class="rule-desc">Always snapshot prod via Acquia Cloud before deploying. Acquia keeps automated backups, but a manual one immediately before updates is non-negotiable.</div>
+      </div>
+
+      <div class="rule-card danger">
+        <div class="rule-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2L2 20H22L12 2Z" stroke="#D93025" stroke-width="2.2" fill="none" stroke-linejoin="round"/>
+            <line x1="12" y1="9" x2="12" y2="14.5" stroke="#D93025" stroke-width="2.2" stroke-linecap="round"/>
+            <circle cx="12" cy="17.5" r="1.2" fill="#D93025"/>
+          </svg>
+        </div>
+        <div class="rule-title">Never Edit Files on Acquia Directly</div>
+        <div class="rule-desc">Acquia environments reset on deploy. All changes must flow through Git. FTP/SSH file edits on prod get wiped and create dangerous out-of-sync states.</div>
+      </div>
+
+      <div class="rule-card warning">
+        <div class="rule-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" stroke="#E8700A" stroke-width="2.2"/>
+            <line x1="12" y1="7" x2="12" y2="13.5" stroke="#E8700A" stroke-width="2.2" stroke-linecap="round"/>
+            <circle cx="12" cy="16.5" r="1.2" fill="#E8700A"/>
+          </svg>
+        </div>
+        <div class="rule-title">Group Related Module Updates</div>
+        <div class="rule-desc">Update modules with shared dependencies together (e.g., all Media ecosystem modules). Partial updates cause version constraint conflicts in Composer.</div>
+      </div>
+
+      <div class="rule-card warning">
+        <div class="rule-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" stroke="#E8700A" stroke-width="2.2"/>
+            <line x1="12" y1="7" x2="12" y2="13.5" stroke="#E8700A" stroke-width="2.2" stroke-linecap="round"/>
+            <circle cx="12" cy="16.5" r="1.2" fill="#E8700A"/>
+          </svg>
+        </div>
+        <div class="rule-title">Run drush updb After Every Deploy</div>
+        <div class="rule-desc">Forgetting database updates after a code deployment causes subtle data corruption and cryptic errors. Put it in your deploy checklist every single time.</div>
+      </div>
+
+      <div class="rule-card safe">
+        <div class="rule-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" stroke="#1A7F37" stroke-width="2.2"/>
+            <path d="M7 12L10.5 15.5L17 9" stroke="#1A7F37" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="rule-title">Use Acquia CLI for All Env Ops</div>
+        <div class="rule-desc">The <code>acli</code> tool lets you copy databases, deploy branches, and run drush commands across environments without leaving your terminal.</div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div>
+      <div class="footer-url"><a href="https://drupalhelps.com" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;border-bottom:2px solid var(--accent-2);">DrupalHelps.com</a></div>
+      <div class="footer-tagline">Expert Drupal Training for Site Builders &mdash; Drupal 10 &amp; 11</div>
+    </div>
+    <div class="footer-rule">
+      Test on Dev.<br>Validate on Stage.<br>Deploy to Prod.
+    </div>
+  </footer>
+
+</main>
+
+<script>
+  if (typeof IntersectionObserver !== 'undefined') {
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (!e.isIntersecting) return;
+        e.target.style.opacity = '1';
+        e.target.style.transform = 'translateY(0)';
+        io.unobserve(e.target);
+      });
+    }, { threshold: 0.08 });
+    document.querySelectorAll('.step-card, .rule-card, .phase-block, .cmd-block').forEach((el, i) => {
+      el.style.opacity = '0';
+      el.style.transform = 'translateY(10px)';
+      el.style.transition = `opacity 480ms ease ${i * 35}ms, transform 480ms ease ${i * 35}ms`;
+      io.observe(el);
+    });
+  }
+</script>
+
+<script>
+  document.querySelectorAll('.mono').forEach(el => {
+    const clean = Array.from(el.childNodes)
+      .filter(n => n.nodeType === Node.TEXT_NODE)
+      .map(n => n.textContent)
+      .join('')
+      .replace(/\u00a0/g, ' ')
+      .trim();
+    el.dataset.copy = clean;
+    el.title = 'Click to copy: ' + clean;
+    el.addEventListener('click', () => {
+      navigator.clipboard.writeText(el.dataset.copy).then(() => {
+        el.classList.add('copied');
+        setTimeout(() => el.classList.remove('copied'), 1800);
+      });
+    });
+  });
+
+  document.querySelectorAll('.cmd-line').forEach(el => {
+    function allText(node) {
+      if (node.nodeType === Node.TEXT_NODE) return node.textContent;
+      return Array.from(node.childNodes).map(allText).join('');
+    }
+    const clean = allText(el).replace(/\u00a0/g, ' ').trim();
+    if (!clean || clean.startsWith('#')) return;
+    el.dataset.copy = clean;
+    el.title = 'Click to copy: ' + clean;
+    el.addEventListener('click', () => {
+      navigator.clipboard.writeText(el.dataset.copy).then(() => {
+        el.classList.add('copied');
+        setTimeout(() => el.classList.remove('copied'), 1800);
+      });
+    });
+  });
+</script>
+</body>
+</html>
